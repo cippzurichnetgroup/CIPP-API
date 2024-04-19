@@ -1,0 +1,217 @@
+{
+    "name": "ZHNG_Tenant_List_v3",
+    "style": "Table",
+    "Fields": [
+      {
+        "name": "adminsTable",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Globale Admins",
+            "value": "adminsTable",
+            "formatter": "table"
+          }
+        ],
+        "StoreAs": "JSON",
+        "API": "Graph",
+        "ExtractFields": [
+          "displayName",
+          "userPrincipalName"
+        ],
+        "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members"
+      },
+      {
+        "name": "AdminTableMFA",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Global Admin MFA Status",
+            "value": "AdminTableMFA",
+            "formatter": "table"
+          }
+        ],
+        "where": "$_.isMFARegistered -eq $false",
+        "StoreAs": "JSON",
+        "API": "Graph",
+        "ExtractFields": [
+          "userDisplayName",
+          "userPrincipalName",
+          "isAdmin",
+          "isMFARegistered",
+          "defaultMFAMethod"
+        ],
+        "URL": "https://graph.microsoft.com/v1.0/reports/authenticationMethods/userRegistrationDetails?$filter=isAdmin eq true"
+      },
+          {
+        "name": "UnifiedAuditLog",
+        "API": "Exchange",
+        "Command": "Get-AdminAuditLogConfig",
+        "ExtractFields": ["UnifiedAuditLogIngestionEnabled"],
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Unified Audit Log",
+            "value": "UnifiedAuditLog",
+            "formatter": "bool"
+          }
+        ]
+      },
+       {
+        "name": "SecureDefaultState",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy",
+        "ExtractFields": ["IsEnabled"],
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Secure Defaults State Enabled",
+            "value": "SecureDefaultState",
+            "formatter": "warnBool"
+          }
+        ]
+      },
+      {
+        "name": "SharedMailboxeswithenabledusers",
+        "API": "Exchange",
+        "Command": "Get-Mailbox",
+        "Parameters": {
+          "RecipientTypeDetails": "SharedMailbox"
+        },
+        "where": "$_.accountDisabled -eq $false",
+        "ExtractFields": ["userprincipalname", "accountDisabled"],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Shared Mailboxes with enabled users",
+            "formatter": "table",
+            "value": "SharedMailboxeswithenabledusers"
+          }
+        ]
+      },
+      {
+        "name": "OAuthAppConsent",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+        "ExtractFields": ["defaultuserrolepermissions"],
+        "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "OAuth App Consent",
+            "value": "OAuthAppConsent",
+            "formatter": "bool"
+          }
+        ]
+      },
+      {
+        "name": "GuestDirectoryRole",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
+        "ExtractFields": ["guestUserRoleId"],
+        "where": "$_.guestUserRoleId -eq 2af84b1e-32c8-42b7-82bc-daa82404023b",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Guest Directory Role Restrictet",
+            "value": "GuestDirectoryRole",
+            "formatter": "bool"
+          }
+        ]
+      },
+      {
+        "name": "DisableM365GroupUsers",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/settings",
+        "ExtractFields": ["EnableGroupCreation"],
+        "where": "$_.EnableGroupCreation -eq $false",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "MS365 Group Creation Disabled",
+            "value": "DisableM365GroupUsers",
+            "formatter": "bool"
+          }
+        ]
+      },
+      {
+        "name": "PasswordNeverExpires",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Password Never Expires",
+            "value": "PasswordNeverExpires",
+            "formatter": "bool"
+          }
+        ],
+        "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+        "StoreAs": "bool",
+        "API": "Graph",
+        "ExtractFields": [
+          "passwordValidityPeriodInDays"
+        ],
+        "URL": "https://graph.microsoft.com/beta/domains"
+      },
+      {
+        "name": "SharepointSettings",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+        "Parameters": {
+          "asApp": "True"
+        },
+        "ExtractFields": [
+          "sharingCapability",
+          "isResharingByExternalUsersEnabled",
+          "tenantDefaultTimezone"
+        ],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Sharing capability",
+            "value": "SharepointSettings.sharingCapability",
+            "formatter": "string"
+          },
+          {
+            "name": "Resharing by external users",
+            "value": "SharepointSettings.isResharingByExternalUsersEnabled",
+            "formatter": "reverseBool"
+          },
+          {
+            "name": "Sharepoint Timezone",
+            "value": "SharepointSettings.tenantDefaultTimezone",
+            "formatter": "string"
+          }
+        ]
+      },
+      {
+        "name": "CurrentSecureScore",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1",
+        "Parameters": {
+          "Nopagination": true
+        },
+        "ExtractFields": ["currentScore", "maxScore", "averageComparativeScores"],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Current Secure Score",
+            "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
+            "formatter": "math",
+            "showAs": "percentage"
+          },
+          {
+            "name": "Average Comparative Score (All Tenants)",
+            "value": "CurrentSecureScore.averageComparativeScores[0].averageScore / CurrentSecureScore.maxScore * 100",
+            "formatter": "math",
+            "showAs": "percentage"
+          },
+          {
+            "name": "Average Comparative Score (Similiar Size Tenants)",
+            "value": "CurrentSecureScore.averageComparativeScores[1].averageScore / CurrentSecureScore.maxScore * 100",
+            "formatter": "math",
+            "showAs": "percentage"
+          }
+        ]
+      }
+    ]
+  }
+  

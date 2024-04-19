@@ -1,0 +1,244 @@
+{
+    "name": "ZHNG_Tenant_Detail_v3",
+    "style": "Tenant",
+    "Fields": [
+      {
+        "name": "adminsTable_detail",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Globale Admins",
+            "value": "adminsTable_detail",
+            "formatter": "table",
+            "desc": "Hier werden alle User mit der Rolle Globaler Admin aufgelistet"
+          }
+        ],
+        "StoreAs": "JSON",
+        "API": "Graph",
+        "ExtractFields": [
+          "displayName",
+          "userPrincipalName"
+        ],
+        "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members"
+      },
+      {
+        "name": "AdminTableMFA_detail",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Global Admin MFA Status",
+            "value": "AdminTableMFA_detail",
+            "formatter": "table",
+            "desc": "Hier werden alle User die eine Admin Rolle haben und nicht für MFA Registriert sind aufgelistet ACHTUNG BENÖTIGT ZWINGEND EINE ENTRA AD P1 LIZENZ, sonst ist die Liste immer leer"
+          }
+        ],
+        "where": "$_.isMFARegistered -eq $false",
+        "StoreAs": "JSON",
+        "API": "Graph",
+        "ExtractFields": [
+          "userDisplayName",
+          "userPrincipalName",
+          "isAdmin",
+          "isMFARegistered",
+          "defaultMFAMethod"
+        ],
+        "URL": "https://graph.microsoft.com/v1.0/reports/authenticationMethods/userRegistrationDetails?$filter=isAdmin eq true"
+      },
+      {
+        "name": "UnifiedAuditLog_detail",
+        "API": "Exchange",
+        "Command": "Get-AdminAuditLogConfig",
+        "ExtractFields": ["UnifiedAuditLogIngestionEnabled"],
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Unified Audit Log",
+            "value": "UnifiedAuditLog_detail",
+            "formatter": "bool",
+            "desc": "Zeigt an ob die Audit Logs aktiv sind, sollte auf YES sein"
+          }
+        ]
+      },
+      {
+        "name": "SecureDefaultState_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy",
+        "ExtractFields": ["IsEnabled"],
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Secure Defaults State Enabled",
+            "value": "SecureDefaultState_detail",
+            "formatter": "warnBool",
+            "desc": "Zeigt an ob die Security Defaults aktiv sind. Falls der Kunde Conditional Access hat sollte dies ein NO sein"
+          }
+        ]
+      },
+      {
+        "name": "SharedMailboxeswithenabledusers_detail",
+        "API": "Exchange",
+        "Command": "Get-Mailbox",
+        "Parameters": {
+          "RecipientTypeDetails": "SharedMailbox"
+        },
+        "where": "$_.accountDisabled -eq $false",
+        "ExtractFields": ["userprincipalname", "accountDisabled"],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Shared Mailboxes with enabled users",
+            "formatter": "table",
+            "value": "SharedMailboxeswithenabledusers_detail",
+            "desc": "Zeigt die Shared Mailboxen an bei denen der User noch aktiv ist"
+          }
+        ]
+      },
+      {
+        "name": "OAuthAppConsent_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+        "ExtractFields": ["defaultuserrolepermissions"],
+        "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "OAuth App Consent",
+            "value": "OAuthAppConsent_detail",
+            "formatter": "bool",
+            "desc": "Zeigt an ob blockiert ist das User OAuth App Berechtigungen erteilen können, dies sollte auf YES sein"
+          }
+        ]
+      },
+      {
+        "name": "GuestDirectoryRole_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
+        "ExtractFields": ["guestUserRoleId"],
+        "where": "$_.guestUserRoleId -eq 2af84b1e-32c8-42b7-82bc-daa82404023b",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "Guest Directory Role Restrictet",
+            "value": "GuestDirectoryRole_detail",
+            "formatter": "bool",
+            "desc": "Zeigt an ob Gast Accounts keine Berechtigung haben um Tenant Information anzuzeigen, dies sollte auf YES sein"
+          }
+        ]
+      },
+      {
+        "name": "DisableM365GroupUsers_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/settings",
+        "ExtractFields": ["EnableGroupCreation"],
+        "where": "$_.Group.Unified/EnableGroupCreation -eq $false",
+        "StoreAs": "bool",
+        "FrontendFields": [
+          {
+            "name": "MS365 Group Creation Disabled",
+            "value": "DisableM365GroupUsers_detail",
+            "formatter": "bool",
+            "desc": "Zeigt an ob es für User gesperrt ist MS365 Gruppen und somit Teams zu erstellen, sollte auf YES sein ACHTUNG funktioniert noch nicht korrekt"
+          }
+        ]
+      },
+      {
+        "name": "PasswordNeverExpires_detail",
+        "UseExistingInfo": false,
+        "FrontendFields": [
+          {
+            "name": "Password Never Expires",
+            "value": "PasswordNeverExpires_detail",
+            "formatter": "bool",
+            "desc": "Zeigt an ob die Passwort Richtline auf 'Niemals Ablaufen' eingestellt ist, sollte auf YES sein"
+          }
+        ],
+        "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+        "StoreAs": "bool",
+        "API": "Graph",
+        "ExtractFields": [
+          "passwordValidityPeriodInDays"
+        ],
+        "URL": "https://graph.microsoft.com/beta/domains"
+      },
+      {
+        "name": "SharepointSettings_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+        "Parameters": {
+          "asApp": "True"
+        },
+        "ExtractFields": [
+          "sharingCapability",
+          "isResharingByExternalUsersEnabled",
+          "tenantDefaultTimezone"
+        ],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Sharing capability",
+            "value": "SharepointSettings_detail.sharingCapability",
+            "formatter": "string",
+            "desc": "Zeigt den aktuellen Sharing Level an, dieser sollte NICHT auf externalUserAndGuestSharing sein (Users can share with anyone by using links that don't require sign-in)."
+          },
+          {
+            "name": "Resharing by external users",
+            "value": "SharepointSettings_detail.isResharingByExternalUsersEnabled",
+            "formatter": "reverseBool",
+            "desc": "Zeigt an ob es für Gäste blockiert ist Daten weiter zu teilen, sollte auf YES sein"
+          },
+          {
+            "name": "Sharepoint Timezone",
+            "value": "SharepointSettings_detail.tenantDefaultTimezone",
+            "formatter": "string",
+            "desc": "Zeigt die Sharepoint Zimezone an, sollte auf Europäschie Zeit sein"
+          }
+        ]
+      },
+      {
+        "name": "Unusedlicenses_detail",
+        "API": "CIPPFunction",
+        "Command": "Get-CIPPLicenseOverview",
+        "ExtractFields": [
+          "License",
+          "TotalLicenses",
+          "availableUnits",
+          "CountUsed"
+        ],
+        "StoreAs": "JSON",
+        "where": "$_.availableUnits -gt 0",
+        "FrontendFields": [
+          {
+            "name": "Unused licenses",
+            "formatter": "table",
+            "value": "Unusedlicenses_detail",
+            "desc": "Zeigt die ungenutzten Lizenzen des Tenants an"
+          }
+        ]
+      },
+      {
+        "name": "CurrentSecureScore_detail",
+        "API": "Graph",
+        "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1",
+        "Parameters": {
+          "Nopagination": true
+        },
+        "ExtractFields": ["currentScore", "maxScore", "averageComparativeScores"],
+        "StoreAs": "JSON",
+        "FrontendFields": [
+          {
+            "name": "Current Secure Score",
+            "value": "CurrentSecureScore_detail.currentScore",
+            "desc": "Zeigt den aktuellen Secure Score an.",
+            "formatter": "number"
+          },
+          {
+            "name": "Max Secure Score",
+            "value": "CurrentSecureScore_detail.maxScore",
+            "desc": "Der Maximal mögliche Secure Score mit den aktiven Lizenzen.",
+            "formatter": "number"
+          }
+        ]
+      }
+    ]
+  }
+  
